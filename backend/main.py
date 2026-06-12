@@ -1,20 +1,52 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from dotenv import load_dotenv
+
 import os
-import replicate
 import time
 import uuid
 import threading
+import replicate
+
+from dotenv import load_dotenv
+from pathlib import Path
 from collections import deque
 
 # ======================
-# LOAD ENV
+# ENV LOAD
 # ======================
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent
+load_dotenv(BASE_DIR / ".env")
 
 REPLICATE_API_TOKEN = os.getenv("REPLICATE_API_TOKEN")
+
+if not REPLICATE_API_TOKEN:
+    raise Exception("Missing REPLICATE_API_TOKEN")
+
+# ======================
+# APP
+# ======================
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ======================
+# MODEL
+# ======================
+class GenerateRequest(BaseModel):
+    prompt: str
+    style: str
+
+# ======================
+# CLIENT (FIX IS HERE)
+# ======================
+client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
 # ======================
 # APP INIT
@@ -23,87 +55,70 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ======================
-# REQUEST MODEL
+# MODEL
 # ======================
 class GenerateRequest(BaseModel):
     prompt: str
     style: str
 
 # ======================
-# REPLICATE CLIENT
-# ======================
-client = replicate.Client(api_token=REPLICATE_API_TOKEN)
-
-# ======================
-# SIMPLE QUEUE SYSTEM (PHASE 2)
+# MEMORY STORAGE
 # ======================
 job_queue = deque()
+job_status = {}
 job_results = {}
 
-queue_lock = threading.Lock()
-
 # ======================
-# WORKER (runs in background)
+# WORKER
 # ======================
 def worker():
     while True:
-        if len(job_queue) == 0:
+        if not job_queue:
             time.sleep(0.5)
             continue
 
-        queue_lock.acquire()
         job = job_queue.popleft()
-        queue_lock.release()
-
         job_id = job["id"]
-        prompt = job["prompt"]
-        style = job["style"]
+
+        job_status[job_id] = "processing"
 
         try:
-            print(f"🚀 Processing job {job_id}")
-
-            model = "stability-ai/stable-diffusion-3"
-
             output = client.run(
-                model,
+                "black-forest-labs/flux-schnell",
                 input={
-                    "prompt": f"{prompt}, {style} style"
+                    "prompt": f"{job['prompt']}, {job['style']} style"
                 }
             )
 
             image_url = output[0] if isinstance(output, list) else output
 
             job_results[job_id] = {
-                "status": "done",
                 "image_url": image_url,
-                "prompt": prompt,
-                "style": style
+                "prompt": job["prompt"],
+                "style": job["style"]
             }
+
+            job_status[job_id] = "done"
 
         except Exception as e:
-            job_results[job_id] = {
-                "status": "error",
-                "error": str(e)
-            }
+            job_status[job_id] = "error"
+            job_results[job_id] = {"error": str(e)}
 
-# Start worker thread
+# start worker
 threading.Thread(target=worker, daemon=True).start()
 
 # ======================
-# CREATE JOB (ASYNC)
+# GENERATE ENDPOINT
 # ======================
 @app.post("/generate")
-def generate_image(req: GenerateRequest):
+def generate(req: GenerateRequest):
 
     job_id = str(uuid.uuid4())
 
@@ -113,31 +128,27 @@ def generate_image(req: GenerateRequest):
         "style": req.style
     })
 
-    job_results[job_id] = {
-        "status": "processing"
-    }
+    job_status[job_id] = "queued"
 
     return {
         "success": True,
-        "job_id": job_id,
-        "status": "processing"
+        "job_id": job_id
     }
 
 # ======================
-# GET JOB STATUS
+# STATUS ENDPOINT
 # ======================
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
 
-    result = job_results.get(job_id)
-
-    if not result:
+    if job_id not in job_status:
         return {
             "success": False,
-            "error": "Job not found"
+            "error": "not_found"
         }
 
     return {
         "success": True,
-        "job": result
+        "status": job_status[job_id],
+        "result": job_results.get(job_id)
     }
