@@ -27,7 +27,9 @@ if not REPLICATE_API_TOKEN:
 # APP
 # ======================
 app = FastAPI()
-
+@app.get("/")
+def home():
+    return {"message": "API is working"}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
