@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect } from "react";
 import { auth, db } from "@/firebase";
@@ -10,6 +10,11 @@ import {
   getDocs,
 } from "firebase/firestore";
 
+// =========================
+// 🌐 BACKEND URL (IMPORTANT)
+// =========================
+const API_URL = "https://ai-image-agent-production.up.railway.app";
+
 export default function Home() {
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState("cinematic");
@@ -18,7 +23,6 @@ export default function Home() {
   const [history, setHistory] = useState([]);
   const [count, setCount] = useState(0);
 
-  // 🔥 PHASE 2 ADDITIONS
   const [jobId, setJobId] = useState(null);
   const [status, setStatus] = useState("");
 
@@ -26,6 +30,9 @@ export default function Home() {
     loadHistory();
   }, []);
 
+  // =========================
+  // 📦 LOAD FIREBASE HISTORY
+  // =========================
   const loadHistory = async () => {
     try {
       const user = auth.currentUser;
@@ -39,14 +46,10 @@ export default function Home() {
       const snapshot = await getDocs(q);
 
       const images = [];
-
-      snapshot.forEach((doc) => {
-        images.push(doc.data());
-      });
+      snapshot.forEach((doc) => images.push(doc.data()));
 
       images.sort(
-        (a, b) =>
-          new Date(b.timestamp) - new Date(a.timestamp)
+        (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
       );
 
       setHistory(images);
@@ -56,9 +59,9 @@ export default function Home() {
     }
   };
 
-  // ================================
-  // 🚀 PHASE 2: JOB BASED GENERATION
-  // ================================
+  // =========================
+  // 🚀 GENERATE IMAGE
+  // =========================
   const generateImage = async () => {
     if (!prompt || loading) return;
 
@@ -68,7 +71,7 @@ export default function Home() {
 
     try {
       // 1. CREATE JOB
-      const res = await fetch("http://127.0.0.1:8000/generate", {
+      const res = await fetch(`${API_URL}/generate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -80,7 +83,7 @@ export default function Home() {
       console.log("Job created:", data);
 
       if (!data.success || !data.job_id) {
-        console.error("❌ Job creation failed:", data);
+        setStatus("failed to create job");
         setLoading(false);
         return;
       }
@@ -91,31 +94,32 @@ export default function Home() {
       // 2. POLLING FUNCTION
       const pollJob = async (id) => {
         try {
-          const res = await fetch(
-            `https://ai-image-agent-production.up.railway.app{id}`
-          );
-
+          const res = await fetch(`${API_URL}/status/${id}`);
           const data = await res.json();
-          console.log("Job status:", data);
+
+          console.log("Status:", data);
 
           if (!data.success) {
-            console.error("❌ Status error:", data.error);
+            setStatus("error");
             setLoading(false);
             return;
           }
 
-          const job = data.job;
-
-          // STILL PROCESSING
-          if (job.status === "processing") {
+          // still processing
+          if (
+            data.status === "queued" ||
+            data.status === "processing"
+          ) {
             setStatus("generating image...");
             setTimeout(() => pollJob(id), 2000);
             return;
           }
 
-          // DONE
-          if (job.status === "done") {
-            setImage(job.image_url);
+          // done
+          if (data.status === "done") {
+            const imageUrl = data.result.image_url;
+
+            setImage(imageUrl);
             setStatus("completed");
 
             const user = auth.currentUser;
@@ -124,7 +128,7 @@ export default function Home() {
               await addDoc(collection(db, "images"), {
                 prompt,
                 style,
-                image: job.image_url,
+                image: imageUrl,
                 userId: user.uid,
                 timestamp: new Date().toISOString(),
                 time: new Date().toLocaleTimeString(),
@@ -136,10 +140,10 @@ export default function Home() {
             return;
           }
 
-          // ERROR
-          if (job.status === "error") {
-            console.error(job.error);
+          // error
+          if (data.status === "error") {
             setStatus("error");
+            console.error(data.result?.error);
             setLoading(false);
             return;
           }
@@ -193,13 +197,14 @@ export default function Home() {
           Images Generated: {count}
         </p>
 
-        {/* STATUS DISPLAY */}
+        {/* STATUS */}
         {status && (
           <p style={{ marginTop: 10, opacity: 0.7 }}>
             {status}
           </p>
         )}
 
+        {/* INPUT */}
         <input
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
@@ -215,6 +220,7 @@ export default function Home() {
           }}
         />
 
+        {/* STYLE */}
         <div style={{ marginTop: 15, textAlign: "left" }}>
           <p style={{ marginBottom: 8 }}>Style</p>
 
@@ -238,6 +244,7 @@ export default function Home() {
           </select>
         </div>
 
+        {/* BUTTON */}
         <button
           onClick={generateImage}
           disabled={loading}
@@ -256,6 +263,7 @@ export default function Home() {
           {loading ? "Generating..." : "Generate Image"}
         </button>
 
+        {/* IMAGE */}
         {image && (
           <div style={{ marginTop: 20 }}>
             <img
@@ -269,25 +277,18 @@ export default function Home() {
           </div>
         )}
 
+        {/* HISTORY */}
         {history.length > 0 && (
           <div style={{ marginTop: 30, textAlign: "left" }}>
             <div
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "center",
               }}
             >
               <h3>History</h3>
 
-              <button
-                onClick={clearHistory}
-                style={{
-                  padding: 8,
-                  borderRadius: 8,
-                  cursor: "pointer",
-                }}
-              >
+              <button onClick={clearHistory}>
                 Clear History
               </button>
             </div>
@@ -307,16 +308,14 @@ export default function Home() {
                   {item.time} • {item.style}
                 </p>
 
-                <p style={{ marginBottom: 10 }}>
-                  {item.prompt}
-                </p>
+                <p>{item.prompt}</p>
 
                 <img
                   src={item.image}
-                  alt="History"
                   style={{
                     width: "100%",
                     borderRadius: 8,
+                    marginTop: 10,
                   }}
                 />
               </div>
