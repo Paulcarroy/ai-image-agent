@@ -13,7 +13,7 @@ from pathlib import Path
 from collections import deque
 
 # ======================
-# ENV LOAD
+# LOAD ENV
 # ======================
 BASE_DIR = Path(__file__).resolve().parent
 load_dotenv(BASE_DIR / ".env")
@@ -27,48 +27,33 @@ if not REPLICATE_API_TOKEN:
 # APP
 # ======================
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # change later if needed
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ======================
+# HOME ROUTE
+# ======================
 @app.get("/")
 def home():
     return {"message": "API is working"}
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 # ======================
-# MODEL
+# REQUEST MODEL
 # ======================
 class GenerateRequest(BaseModel):
     prompt: str
     style: str
 
 # ======================
-# CLIENT (FIX IS HERE)
+# REPLICATE CLIENT
 # ======================
 client = replicate.Client(api_token=REPLICATE_API_TOKEN)
-
-# ======================
-# APP INIT
-# ======================
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# ======================
-# MODEL
-# ======================
-class GenerateRequest(BaseModel):
-    prompt: str
-    style: str
 
 # ======================
 # MEMORY STORAGE
@@ -78,11 +63,11 @@ job_status = {}
 job_results = {}
 
 # ======================
-# WORKER
+# BACKGROUND WORKER
 # ======================
 def worker():
     while True:
-        if not job_queue:
+        if len(job_queue) == 0:
             time.sleep(0.5)
             continue
 
@@ -111,13 +96,15 @@ def worker():
 
         except Exception as e:
             job_status[job_id] = "error"
-            job_results[job_id] = {"error": str(e)}
+            job_results[job_id] = {
+                "error": str(e)
+            }
 
-# start worker
+# Start worker thread
 threading.Thread(target=worker, daemon=True).start()
 
 # ======================
-# GENERATE ENDPOINT
+# GENERATE IMAGE
 # ======================
 @app.post("/generate")
 def generate(req: GenerateRequest):
@@ -138,7 +125,7 @@ def generate(req: GenerateRequest):
     }
 
 # ======================
-# STATUS ENDPOINT
+# CHECK STATUS
 # ======================
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
