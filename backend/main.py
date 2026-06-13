@@ -26,7 +26,12 @@ if not REPLICATE_API_TOKEN:
 # ======================
 # APP
 # ======================
-app = FastAPI()
+app = FastAPI(
+    title="AI Image Agent API",
+    docs_url="/docs",
+    redoc_url="/redoc",
+    openapi_url="/openapi.json"
+)
 
 app.add_middleware(
     CORSMiddleware,
