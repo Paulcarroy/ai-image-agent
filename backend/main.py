@@ -47,7 +47,13 @@ app.add_middleware(
 @app.get("/")
 def home():
     return {"message": "API is working"}
+@app.get("/hello")
+def hello():
+    return {"hello": "world"}
 
+@app.get("/test")
+def test():
+    return {"status": "ok"}
 # ======================
 # REQUEST MODEL
 # ======================
