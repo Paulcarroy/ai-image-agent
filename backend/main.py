@@ -54,6 +54,11 @@ def hello():
 @app.get("/test")
 def test():
     return {"status": "ok"}
+@app.get("/debug")
+def debug():
+    return {
+        "routes": [route.path for route in app.routes]
+    }
 # ======================
 # REQUEST MODEL
 # ======================
@@ -152,3 +157,7 @@ def get_status(job_id: str):
         "status": job_status[job_id],
         "result": job_results.get(job_id)
     }
+print("========== ROUTES ==========")
+
+for route in app.routes:
+    print(route.path)
