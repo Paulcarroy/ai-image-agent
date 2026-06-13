@@ -92,7 +92,7 @@ export default function Home() {
       const pollJob = async (id) => {
         try {
           const res = await fetch(
-            `http://127.0.0.1:8000/status/${id}`
+            `https://ai-image-agent-production.up.railway.app{id}`
           );
 
           const data = await res.json();

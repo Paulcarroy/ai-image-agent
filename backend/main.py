@@ -6,11 +6,11 @@ import os
 import time
 import uuid
 import threading
-import replicate
-
-from dotenv import load_dotenv
-from pathlib import Path
 from collections import deque
+from pathlib import Path
+
+import replicate
+from dotenv import load_dotenv
 
 # ======================
 # LOAD ENV
@@ -35,30 +35,23 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # change later if needed
+    allow_origins=["*"],   # tighten later if desired
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # ======================
-# HOME ROUTE
+# HOME ROUTES
 # ======================
 @app.get("/")
 def home():
     return {"message": "API is working"}
-@app.get("/hello")
-def hello():
-    return {"hello": "world"}
 
-@app.get("/test")
-def test():
-    return {"status": "ok"}
-@app.get("/debug")
-def debug():
-    return {
-        "routes": [route.path for route in app.routes]
-    }
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
 # ======================
 # REQUEST MODEL
 # ======================
@@ -72,7 +65,7 @@ class GenerateRequest(BaseModel):
 client = replicate.Client(api_token=REPLICATE_API_TOKEN)
 
 # ======================
-# MEMORY STORAGE
+# IN-MEMORY STORAGE
 # ======================
 job_queue = deque()
 job_status = {}
@@ -83,6 +76,7 @@ job_results = {}
 # ======================
 def worker():
     while True:
+
         if len(job_queue) == 0:
             time.sleep(0.5)
             continue
@@ -100,7 +94,11 @@ def worker():
                 }
             )
 
-            image_url = output[0] if isinstance(output, list) else output
+            # Handle FileOutput objects
+            if isinstance(output, list):
+                image_url = output[0].url
+            else:
+                image_url = str(output)
 
             job_results[job_id] = {
                 "image_url": image_url,
@@ -112,15 +110,17 @@ def worker():
 
         except Exception as e:
             job_status[job_id] = "error"
+
             job_results[job_id] = {
                 "error": str(e)
             }
+
 
 # Start worker thread
 threading.Thread(target=worker, daemon=True).start()
 
 # ======================
-# GENERATE IMAGE
+# GENERATE
 # ======================
 @app.post("/generate")
 def generate(req: GenerateRequest):
@@ -141,7 +141,7 @@ def generate(req: GenerateRequest):
     }
 
 # ======================
-# CHECK STATUS
+# STATUS
 # ======================
 @app.get("/status/{job_id}")
 def get_status(job_id: str):
@@ -157,7 +157,3 @@ def get_status(job_id: str):
         "status": job_status[job_id],
         "result": job_results.get(job_id)
     }
-print("========== ROUTES ==========")
-
-for route in app.routes:
-    print(route.path)
