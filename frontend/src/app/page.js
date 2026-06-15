@@ -14,8 +14,12 @@ const API_URL =
   "https://ai-image-agent-production.up.railway.app";
 
 export default function Home() {
-  const [started, setStarted] = useState(false);
+  /* =========================
+     👤 USER PROFILE STATE
+  ========================= */
+  const [user, setUser] = useState(null);
 
+  const [started, setStarted] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [style, setStyle] = useState("cinematic");
   const [image, setImage] = useState("");
@@ -25,7 +29,20 @@ export default function Home() {
   const [status, setStatus] = useState("");
   const [dots, setDots] = useState("");
 
-  // 🔥 loading animation
+  /* =========================
+     🔐 AUTH LISTENER (PROFILE)
+  ========================= */
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+      setUser(u);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  /* =========================
+     🔥 LOADING ANIMATION
+  ========================= */
   useEffect(() => {
     if (!loading) return;
 
@@ -38,14 +55,13 @@ export default function Home() {
 
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [user]);
 
-  // ========================
-  // LOAD FIREBASE HISTORY
-  // ========================
+  /* =========================
+     📸 LOAD USER HISTORY
+  ========================= */
   const loadHistory = async () => {
     try {
-      const user = auth.currentUser;
       if (!user) return;
 
       const q = query(
@@ -72,9 +88,9 @@ export default function Home() {
     }
   };
 
-  // ========================
-  // IMAGE GENERATION
-  // ========================
+  /* =========================
+     🚀 GENERATE IMAGE
+  ========================= */
   const generateImage = async () => {
     if (!prompt || loading) return;
 
@@ -113,7 +129,6 @@ export default function Home() {
             return;
           }
 
-          // STILL PROCESSING
           if (
             data.status === "queued" ||
             data.status === "processing"
@@ -123,7 +138,6 @@ export default function Home() {
             return;
           }
 
-          // DONE
           if (data.status === "done") {
             const img =
               data.result?.image_url;
@@ -137,8 +151,9 @@ export default function Home() {
             setImage(img);
             setStatus("completed");
 
-            const user = auth.currentUser;
-
+            /* =========================
+               💾 SAVE WITH USER PROFILE
+            ========================= */
             if (user) {
               await addDoc(
                 collection(db, "images"),
@@ -147,6 +162,7 @@ export default function Home() {
                   style,
                   image: img,
                   userId: user.uid,
+                  userEmail: user.email,
                   timestamp:
                     new Date().toISOString(),
                 }
@@ -158,11 +174,9 @@ export default function Home() {
             return;
           }
 
-          // ERROR
           if (data.status === "error") {
             setStatus("generation failed");
             setLoading(false);
-            return;
           }
         } catch (err) {
           console.error(err);
@@ -174,14 +188,13 @@ export default function Home() {
       poll(data.job_id);
     } catch (err) {
       console.error(err);
-      setStatus("error");
       setLoading(false);
     }
   };
 
-  // ========================
-  // SURPRISE PROMPT
-  // ========================
+  /* =========================
+     🎲 SURPRISE PROMPT
+  ========================= */
   const surpriseMe = () => {
     const ideas = [
       "cyberpunk samurai in neon rain",
@@ -189,52 +202,76 @@ export default function Home() {
       "anime astronaut on mars",
       "futuristic Lagos skyline",
       "glowing dragon in space",
-      "ultra realistic city at night",
     ];
 
     setPrompt(
-      ideas[
-        Math.floor(
-          Math.random() * ideas.length
-        )
-      ]
+      ideas[Math.floor(Math.random() * ideas.length)]
     );
   };
 
-  // ========================
-  // LANDING PAGE
-  // ========================
+  /* =========================
+     📱 LANDING PAGE
+  ========================= */
   if (!started) {
     return (
       <div
         style={{
           height: "100vh",
+          position: "relative",
+          overflow: "hidden",
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          background:
-            "radial-gradient(circle,#1a1a2e,#0f0f0f)",
           color: "white",
           textAlign: "center",
-          padding: 20,
         }}
       >
-        <div>
+        {/* VIDEO BACKGROUND */}
+        <video
+          autoPlay
+          loop
+          muted
+          playsInline
+          style={{
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            filter: "brightness(0.35)",
+          }}
+        >
+          <source
+            src="https://cdn.coverr.co/videos/coverr-neural-network-1555/1080p.mp4"
+            type="video/mp4"
+          />
+        </video>
+
+        {/* OVERLAY */}
+        <div
+          style={{
+            position: "absolute",
+            width: "100%",
+            height: "100%",
+            background:
+              "rgba(0,0,0,0.7)",
+          }}
+        />
+
+        {/* CONTENT */}
+        <div style={{ zIndex: 2, maxWidth: 600 }}>
           <h1
             style={{
-              fontSize: 40,
+              fontSize: 48,
               background:
                 "linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899)",
-              WebkitBackgroundClip:
-                "text",
-              WebkitTextFillColor:
-                "transparent",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
             }}
           >
             AI Image Generator
           </h1>
 
-          <p style={{ opacity: 0.6 }}>
+          <p style={{ opacity: 0.8 }}>
             Turn imagination into viral AI art
           </p>
 
@@ -242,8 +279,8 @@ export default function Home() {
             onClick={() => setStarted(true)}
             style={{
               marginTop: 20,
-              padding: "12px 20px",
-              borderRadius: 10,
+              padding: "14px 22px",
+              borderRadius: 12,
               border: "none",
               background:
                 "linear-gradient(90deg,#6366f1,#8b5cf6)",
@@ -258,9 +295,9 @@ export default function Home() {
     );
   }
 
-  // ========================
-  // MAIN TIKTOK UI
-  // ========================
+  /* =========================
+     📱 MAIN APP
+  ========================= */
   return (
     <div
       style={{
@@ -271,14 +308,29 @@ export default function Home() {
         color: "white",
       }}
     >
+      {/* 👤 PROFILE HEADER */}
+      {user && (
+        <div
+          style={{
+            position: "fixed",
+            top: 10,
+            right: 10,
+            background: "#111",
+            padding: "8px 12px",
+            borderRadius: 10,
+            fontSize: 12,
+            zIndex: 10,
+          }}
+        >
+          👤 {user.email}
+        </div>
+      )}
+
       {/* GENERATOR */}
       <div
         style={{
           height: "100vh",
           scrollSnapAlign: "start",
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center",
           padding: 20,
         }}
       >
@@ -294,10 +346,6 @@ export default function Home() {
             setPrompt(e.target.value)
           }
           placeholder="Describe your image..."
-          style={{
-            padding: 12,
-            marginTop: 10,
-          }}
         />
 
         <select
@@ -305,7 +353,6 @@ export default function Home() {
           onChange={(e) =>
             setStyle(e.target.value)
           }
-          style={{ marginTop: 10 }}
         >
           <option value="cinematic">
             Cinematic
@@ -324,14 +371,13 @@ export default function Home() {
         <button
           onClick={generateImage}
           disabled={loading}
-          style={{ marginTop: 10 }}
         >
           {loading
             ? "Generating" + dots
             : "Generate"}
         </button>
 
-        {status && <p>{status}</p>}
+        <p>{status}</p>
 
         {image && (
           <img
@@ -345,7 +391,7 @@ export default function Home() {
         )}
       </div>
 
-      {/* FEED */}
+      {/* FEED (USER ONLY) */}
       {history.map((item, i) => (
         <div
           key={i}
@@ -360,8 +406,7 @@ export default function Home() {
             style={{
               width: "100%",
               height: "100%",
-              objectFit:
-                "cover",
+              objectFit: "cover",
             }}
           />
 
@@ -374,6 +419,9 @@ export default function Home() {
           >
             <p>{item.style}</p>
             <p>{item.prompt}</p>
+            <p style={{ fontSize: 10, opacity: 0.6 }}>
+              {item.userEmail}
+            </p>
           </div>
         </div>
       ))}
