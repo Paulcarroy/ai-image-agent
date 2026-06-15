@@ -213,90 +213,91 @@ export default function Home() {
      📱 LANDING PAGE
   ========================= */
   if (!started) {
-    return (
-      <div
+  return (
+    <div
+      style={{
+        height: "100vh",
+        width: "100%",
+        position: "relative",
+        overflow: "hidden",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        color: "white",
+      }}
+    >
+      {/* VIDEO BACKGROUND */}
+      <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
         style={{
-          height: "100vh",
-          position: "relative",
-          overflow: "hidden",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          color: "white",
-          textAlign: "center",
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          objectFit: "cover",
+          zIndex: 0,
         }}
       >
-        {/* VIDEO BACKGROUND */}
-        <video
-  autoPlay
-  loop
-  muted
-  playsInline
-  preload="auto"
-  style={{
-    position: "absolute",
-    top: 0,
-    left: 0,
-    width: "100%",
-    height: "100%",
-    objectFit: "cover",
-    zIndex: 0,
-  }}
->
-  <source
-    src="https://cdn.pixabay.com/video/2023/10/20/185623-876778885_large.mp4"
-    type="video/mp4"
-  />
-</video>
-        {/* OVERLAY */}
-        <div
-          style={{
-            position: "absolute",
-            width: "100%",
-            height: "100%",
-            background:
-              "rgba(0,0,0,0.7)",
-          }}
+        <source
+          src="https://cdn.pixabay.com/video/2023/10/20/185623-876778885_large.mp4"
+          type="video/mp4"
         />
+      </video>
 
-        {/* CONTENT */}
-        <div style={{ zIndex: 2, maxWidth: 600 }}>
-          <h1
-            style={{
-              fontSize: 48,
-              background:
-                "linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            AI Image Generator
-          </h1>
+      {/* DARK OVERLAY */}
+      <div
+        style={{
+          position: "absolute",
+          top: 0,
+          left: 0,
+          width: "100%",
+          height: "100%",
+          background: "rgba(0,0,0,0.6)",
+          zIndex: 1,
+        }}
+      />
 
-          <p style={{ opacity: 0.8 }}>
-            Turn imagination into viral AI art
-          </p>
+      {/* CONTENT */}
+      <div
+        style={{
+          position: "relative",
+          zIndex: 2,
+          textAlign: "center",
+          maxWidth: 600,
+          padding: 20,
+        }}
+      >
+        <h1 style={{ fontSize: 48 }}>
+          AI Image Generator
+        </h1>
 
-          <button
-            onClick={() => setStarted(true)}
-            style={{
-              marginTop: 20,
-              padding: "14px 22px",
-              borderRadius: 12,
-              border: "none",
-              background:
-                "linear-gradient(90deg,#6366f1,#8b5cf6)",
-              color: "white",
-              cursor: "pointer",
-            }}
-          >
-            Start Creating →
-          </button>
-        </div>
+        <p style={{ opacity: 0.8 }}>
+          Turn imagination into AI art
+        </p>
+
+        <button
+          onClick={() => setStarted(true)}
+          style={{
+            marginTop: 20,
+            padding: "14px 22px",
+            borderRadius: 12,
+            border: "none",
+            background: "#6366f1",
+            color: "white",
+            cursor: "pointer",
+          }}
+        >
+          Start Creating →
+        </button>
       </div>
-    );
-  }
-
+    </div>
+  );
+}
   /* =========================
      📱 MAIN APP
   ========================= */
