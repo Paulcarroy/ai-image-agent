@@ -40,6 +40,9 @@ export default function Home() {
     loadHistory();
   }, []);
 
+  // ========================
+  // LOAD FIREBASE HISTORY
+  // ========================
   const loadHistory = async () => {
     try {
       const user = auth.currentUser;
@@ -53,11 +56,14 @@ export default function Home() {
       const snapshot = await getDocs(q);
 
       const images = [];
-      snapshot.forEach((doc) => images.push(doc.data()));
+      snapshot.forEach((doc) =>
+        images.push(doc.data())
+      );
 
       images.sort(
         (a, b) =>
-          new Date(b.timestamp) - new Date(a.timestamp)
+          new Date(b.timestamp) -
+          new Date(a.timestamp)
       );
 
       setHistory(images);
@@ -66,7 +72,9 @@ export default function Home() {
     }
   };
 
-  // 🚀 generate image
+  // ========================
+  // IMAGE GENERATION
+  // ========================
   const generateImage = async () => {
     if (!prompt || loading) return;
 
@@ -85,89 +93,79 @@ export default function Home() {
 
       const data = await res.json();
 
+      if (!data.success) {
+        setStatus("error creating job");
+        setLoading(false);
+        return;
+      }
+
       const poll = async (id) => {
-try {
-const res = await fetch(
-`${API_URL}/status/${id}`
-);
+        try {
+          const res = await fetch(
+            `${API_URL}/status/${id}`
+          );
 
-```
-const data = await res.json();
+          const data = await res.json();
 
-console.log("Status response:", data);
+          if (!data.success) {
+            setStatus("error");
+            setLoading(false);
+            return;
+          }
 
-if (!data.success) {
-  console.error("Status error:", data);
-  setStatus("error");
-  setLoading(false);
-  return;
-}
+          // STILL PROCESSING
+          if (
+            data.status === "queued" ||
+            data.status === "processing"
+          ) {
+            setStatus("generating...");
+            setTimeout(() => poll(id), 2000);
+            return;
+          }
 
-// Still generating
-if (
-  data.status === "queued" ||
-  data.status === "processing"
-) {
-  setStatus("generating...");
-  setTimeout(() => poll(id), 2000);
-  return;
-}
+          // DONE
+          if (data.status === "done") {
+            const img =
+              data.result?.image_url;
 
-// Finished successfully
-if (data.status === "done") {
-  const img = data.result?.image_url;
+            if (!img) {
+              setStatus("missing image");
+              setLoading(false);
+              return;
+            }
 
-  if (!img) {
-    console.error("Missing image URL:", data);
-    setStatus("error");
-    setLoading(false);
-    return;
-  }
+            setImage(img);
+            setStatus("completed");
 
-  console.log("Image URL:", img);
+            const user = auth.currentUser;
 
-  setImage(img);
-  setStatus("completed");
+            if (user) {
+              await addDoc(
+                collection(db, "images"),
+                {
+                  prompt,
+                  style,
+                  image: img,
+                  userId: user.uid,
+                  timestamp:
+                    new Date().toISOString(),
+                }
+              );
+            }
 
-  const user = auth.currentUser;
+            await loadHistory();
+            setLoading(false);
+            return;
+          }
 
-  if (user) {
-    await addDoc(collection(db, "images"), {
-      prompt,
-      style,
-      image: img,
-      userId: user.uid,
-      timestamp: new Date().toISOString(),
-    });
-  }
-
-  await loadHistory();
-  setLoading(false);
-  return;
-}
-
-// Generation failed
-if (data.status === "error") {
-  console.error("Generation failed:", data.result);
-  setStatus("error");
-  setLoading(false);
-}
-```
-
-} catch (err) {
-console.error("Polling error:", err);
-setStatus("error");
-setLoading(false);
-}
-};
-{status && (
-  <p style={{ opacity: 0.6 }}>{status}</p>
-)}
-          await loadHistory();
-          setLoading(false);
-        }
-
-        if (data.status === "error") {
+          // ERROR
+          if (data.status === "error") {
+            setStatus("generation failed");
+            setLoading(false);
+            return;
+          }
+        } catch (err) {
+          console.error(err);
           setStatus("error");
           setLoading(false);
         }
@@ -176,26 +174,36 @@ setLoading(false);
       poll(data.job_id);
     } catch (err) {
       console.error(err);
+      setStatus("error");
       setLoading(false);
     }
   };
 
-  // 🎲 surprise
+  // ========================
+  // SURPRISE PROMPT
+  // ========================
   const surpriseMe = () => {
     const ideas = [
       "cyberpunk samurai in neon rain",
-      "floating island in sky",
+      "floating island in the sky",
       "anime astronaut on mars",
       "futuristic Lagos skyline",
       "glowing dragon in space",
+      "ultra realistic city at night",
     ];
 
     setPrompt(
-      ideas[Math.floor(Math.random() * ideas.length)]
+      ideas[
+        Math.floor(
+          Math.random() * ideas.length
+        )
+      ]
     );
   };
 
-  // 📱 LANDING PAGE (MODE 1)
+  // ========================
+  // LANDING PAGE
+  // ========================
   if (!started) {
     return (
       <div
@@ -214,18 +222,20 @@ setLoading(false);
         <div>
           <h1
             style={{
-              fontSize: 34,
+              fontSize: 40,
               background:
                 "linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
+              WebkitBackgroundClip:
+                "text",
+              WebkitTextFillColor:
+                "transparent",
             }}
           >
             AI Image Generator
           </h1>
 
-          <p style={{ opacity: 0.6, marginTop: 10 }}>
-            Turn imagination into viral AI art instantly
+          <p style={{ opacity: 0.6 }}>
+            Turn imagination into viral AI art
           </p>
 
           <button
@@ -248,7 +258,9 @@ setLoading(false);
     );
   }
 
-  // 📱 MAIN APP (TIKTOK FEED UI MODE)
+  // ========================
+  // MAIN TIKTOK UI
+  // ========================
   return (
     <div
       style={{
@@ -259,7 +271,7 @@ setLoading(false);
         color: "white",
       }}
     >
-      {/* GENERATOR SECTION */}
+      {/* GENERATOR */}
       <div
         style={{
           height: "100vh",
@@ -272,81 +284,74 @@ setLoading(false);
       >
         <h2>Generate AI Image</h2>
 
-        <button
-          onClick={surpriseMe}
-          style={{
-            marginBottom: 10,
-            padding: 8,
-            borderRadius: 8,
-            background: "#111",
-            color: "white",
-          }}
-        >
+        <button onClick={surpriseMe}>
           🎲 Surprise Me
         </button>
 
         <input
           value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
+          onChange={(e) =>
+            setPrompt(e.target.value)
+          }
           placeholder="Describe your image..."
           style={{
             padding: 12,
-            borderRadius: 8,
-            background: "#111",
-            color: "white",
+            marginTop: 10,
           }}
         />
 
         <select
           value={style}
-          onChange={(e) => setStyle(e.target.value)}
-          style={{
-            marginTop: 10,
-            padding: 10,
-            borderRadius: 8,
-            background: "#111",
-            color: "white",
-          }}
+          onChange={(e) =>
+            setStyle(e.target.value)
+          }
+          style={{ marginTop: 10 }}
         >
-          <option value="cinematic">Cinematic</option>
-          <option value="anime">Anime</option>
-          <option value="realistic">Realistic</option>
-          <option value="3d render">3D Render</option>
+          <option value="cinematic">
+            Cinematic
+          </option>
+          <option value="anime">
+            Anime
+          </option>
+          <option value="realistic">
+            Realistic
+          </option>
+          <option value="3d render">
+            3D Render
+          </option>
         </select>
 
         <button
           onClick={generateImage}
           disabled={loading}
-          style={{
-            marginTop: 15,
-            padding: 12,
-            borderRadius: 10,
-            background: loading
-              ? "#333"
-              : "#6366f1",
-            color: "white",
-          }}
+          style={{ marginTop: 10 }}
         >
           {loading
             ? "Generating" + dots
             : "Generate"}
         </button>
 
-        {status && (
-          <p style={{ opacity: 0.6 }}>{status}</p>
+        {status && <p>{status}</p>}
+
+        {image && (
+          <img
+            src={image}
+            style={{
+              width: "100%",
+              marginTop: 20,
+              borderRadius: 12,
+            }}
+          />
         )}
       </div>
 
-      {/* FEED SECTION (TIKTOK STYLE) */}
+      {/* FEED */}
       {history.map((item, i) => (
         <div
           key={i}
           style={{
             height: "100vh",
             scrollSnapAlign: "start",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
             position: "relative",
           }}
         >
@@ -355,25 +360,20 @@ setLoading(false);
             style={{
               width: "100%",
               height: "100%",
-              objectFit: "cover",
-              opacity: 0.9,
+              objectFit:
+                "cover",
             }}
           />
 
-          {/* overlay */}
           <div
             style={{
               position: "absolute",
-              bottom: 30,
+              bottom: 20,
               left: 20,
             }}
           >
-            <p style={{ fontSize: 12 }}>
-              {item.style}
-            </p>
-            <p style={{ fontSize: 14 }}>
-              {item.prompt}
-            </p>
+            <p>{item.style}</p>
+            <p>{item.prompt}</p>
           </div>
         </div>
       ))}
