@@ -228,24 +228,26 @@ export default function Home() {
       >
         {/* VIDEO BACKGROUND */}
         <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          style={{
-            position: "absolute",
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            filter: "brightness(0.35)",
-          }}
-        >
-          <source
-            src="https://cdn.coverr.co/videos/coverr-neural-network-1555/1080p.mp4"
-            type="video/mp4"
-          />
-        </video>
-
+  autoPlay
+  loop
+  muted
+  playsInline
+  preload="auto"
+  style={{
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    zIndex: 0,
+  }}
+>
+  <source
+    src="https://cdn.pixabay.com/video/2023/10/20/185623-876778885_large.mp4"
+    type="video/mp4"
+  />
+</video>
         {/* OVERLAY */}
         <div
           style={{
