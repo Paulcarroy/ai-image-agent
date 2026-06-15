@@ -434,7 +434,7 @@ export default function Home() {
         boxShadow: "0 0 20px rgba(99,102,241,0.3)",
       }}
     >
-      {loading ? "Generating..." + dots : "🚀 Generate Image"}
+      {loading ? "Generating..." + dots : " Generate Image"}
     </button>
 
     {/* STATUS */}
@@ -451,6 +451,26 @@ export default function Home() {
     )}
   </div>
 </div>
+{/* IMAGE PREVIEW */}
+{image && (
+  <div
+    style={{
+      marginTop: 18,
+      borderRadius: 14,
+      overflow: "hidden",
+      border: "1px solid rgba(255,255,255,0.1)",
+    }}
+  >
+    <img
+      src={image}
+      alt="generated"
+      style={{
+        width: "100%",
+        display: "block",
+      }}
+    />
+  </div>
+)}
       {/* FEED (USER ONLY) */}
       {history.map((item, i) => (
         <div
