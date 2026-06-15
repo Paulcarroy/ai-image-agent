@@ -86,43 +86,83 @@ export default function Home() {
       const data = await res.json();
 
       const poll = async (id) => {
-        const res = await fetch(
-          `${API_URL}/status/${id}`
-        );
-        const data = await res.json();
+try {
+const res = await fetch(
+`${API_URL}/status/${id}`
+);
 
-        if (!data.success) {
-          setLoading(false);
-          return;
-        }
+```
+const data = await res.json();
 
-        if (
-          data.status === "queued" ||
-          data.status === "processing"
-        ) {
-          setStatus("generating...");
-          setTimeout(() => poll(id), 2000);
-          return;
-        }
+console.log("Status response:", data);
 
-        if (data.status === "done") {
-          const img = data.result.image_url;
+if (!data.success) {
+  console.error("Status error:", data);
+  setStatus("error");
+  setLoading(false);
+  return;
+}
 
-          setImage(img);
-          setStatus("completed");
+// Still generating
+if (
+  data.status === "queued" ||
+  data.status === "processing"
+) {
+  setStatus("generating...");
+  setTimeout(() => poll(id), 2000);
+  return;
+}
 
-          const user = auth.currentUser;
+// Finished successfully
+if (data.status === "done") {
+  const img = data.result?.image_url;
 
-          if (user) {
-            await addDoc(collection(db, "images"), {
-              prompt,
-              style,
-              image: img,
-              userId: user.uid,
-              timestamp: new Date().toISOString(),
-            });
-          }
+  if (!img) {
+    console.error("Missing image URL:", data);
+    setStatus("error");
+    setLoading(false);
+    return;
+  }
 
+  console.log("Image URL:", img);
+
+  setImage(img);
+  setStatus("completed");
+
+  const user = auth.currentUser;
+
+  if (user) {
+    await addDoc(collection(db, "images"), {
+      prompt,
+      style,
+      image: img,
+      userId: user.uid,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  await loadHistory();
+  setLoading(false);
+  return;
+}
+
+// Generation failed
+if (data.status === "error") {
+  console.error("Generation failed:", data.result);
+  setStatus("error");
+  setLoading(false);
+}
+```
+
+} catch (err) {
+console.error("Polling error:", err);
+setStatus("error");
+setLoading(false);
+}
+};
+{status && (
+  <p style={{ opacity: 0.6 }}>{status}</p>
+)}
           await loadHistory();
           setLoading(false);
         }
