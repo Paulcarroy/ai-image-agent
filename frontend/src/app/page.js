@@ -330,70 +330,127 @@ export default function Home() {
       )}
 
       {/* GENERATOR */}
-      <div
+      {/* GENERATOR CARD */}
+<div
+  style={{
+    height: "100vh",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  }}
+>
+  <div
+    style={{
+      width: "100%",
+      maxWidth: 500,
+      background: "rgba(17,17,17,0.8)",
+      border: "1px solid rgba(255,255,255,0.1)",
+      borderRadius: 20,
+      padding: 24,
+      boxShadow: "0 0 40px rgba(99,102,241,0.15)",
+      backdropFilter: "blur(10px)",
+    }}
+  >
+    {/* HEADER */}
+    <h2 style={{ marginBottom: 5 }}>
+      ✨ Create AI Image
+    </h2>
+
+    <p style={{ fontSize: 12, opacity: 0.6 }}>
+      Turn ideas into viral visuals
+    </p>
+
+    {/* SURPRISE BUTTON */}
+    <button
+      onClick={surpriseMe}
+      style={{
+        marginTop: 15,
+        marginBottom: 15,
+        padding: "8px 12px",
+        borderRadius: 10,
+        border: "none",
+        background: "#1f1f1f",
+        color: "white",
+        cursor: "pointer",
+        fontSize: 12,
+      }}
+    >
+      🎲 Surprise Me
+    </button>
+
+    {/* PROMPT INPUT */}
+    <input
+      value={prompt}
+      onChange={(e) => setPrompt(e.target.value)}
+      placeholder="Describe your image..."
+      style={{
+        width: "100%",
+        padding: 12,
+        borderRadius: 12,
+        border: "1px solid rgba(255,255,255,0.1)",
+        background: "#0f0f0f",
+        color: "white",
+        outline: "none",
+        marginBottom: 12,
+      }}
+    />
+
+    {/* STYLE SELECT */}
+    <select
+      value={style}
+      onChange={(e) => setStyle(e.target.value)}
+      style={{
+        width: "100%",
+        padding: 12,
+        borderRadius: 12,
+        border: "1px solid rgba(255,255,255,0.1)",
+        background: "#0f0f0f",
+        color: "white",
+        marginBottom: 15,
+      }}
+    >
+      <option value="cinematic">🎬 Cinematic</option>
+      <option value="anime">🎌 Anime</option>
+      <option value="realistic">📸 Realistic</option>
+      <option value="3d render">🧊 3D Render</option>
+    </select>
+
+    {/* GENERATE BUTTON */}
+    <button
+      onClick={generateImage}
+      disabled={loading}
+      style={{
+        width: "100%",
+        padding: 14,
+        borderRadius: 14,
+        border: "none",
+        background: loading
+          ? "#333"
+          : "linear-gradient(90deg,#6366f1,#8b5cf6,#ec4899)",
+        color: "white",
+        fontWeight: "bold",
+        cursor: "pointer",
+        boxShadow: "0 0 20px rgba(99,102,241,0.3)",
+      }}
+    >
+      {loading ? "Generating..." + dots : "🚀 Generate Image"}
+    </button>
+
+    {/* STATUS */}
+    {status && (
+      <p
         style={{
-          height: "100vh",
-          scrollSnapAlign: "start",
-          padding: 20,
+          marginTop: 12,
+          fontSize: 12,
+          opacity: 0.7,
         }}
       >
-        <h2>Generate AI Image</h2>
-
-        <button onClick={surpriseMe}>
-          🎲 Surprise Me
-        </button>
-
-        <input
-          value={prompt}
-          onChange={(e) =>
-            setPrompt(e.target.value)
-          }
-          placeholder="Describe your image..."
-        />
-
-        <select
-          value={style}
-          onChange={(e) =>
-            setStyle(e.target.value)
-          }
-        >
-          <option value="cinematic">
-            Cinematic
-          </option>
-          <option value="anime">
-            Anime
-          </option>
-          <option value="realistic">
-            Realistic
-          </option>
-          <option value="3d render">
-            3D Render
-          </option>
-        </select>
-
-        <button
-          onClick={generateImage}
-          disabled={loading}
-        >
-          {loading
-            ? "Generating" + dots
-            : "Generate"}
-        </button>
-
-        <p>{status}</p>
-
-        {image && (
-          <img
-            src={image}
-            style={{
-              width: "100%",
-              marginTop: 20,
-              borderRadius: 12,
-            }}
-          />
-        )}
-      </div>
-
+        {status}
+      </p>
+    )}
+  </div>
+</div>
       {/* FEED (USER ONLY) */}
       {history.map((item, i) => (
         <div
